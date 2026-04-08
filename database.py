@@ -36,10 +36,14 @@ def create_tables():
         )
     ''')
     
-    # Insert default admin if it doesn't exist
-    c.execute("SELECT * FROM users WHERE username='admin'")
-    if not c.fetchone():
-        c.execute("INSERT INTO users (username, email, password, role) VALUES ('admin', 'nehaareddy02@gmail.com', 'admin123', 'Admin')")
+    # Enforce exactly one Admin user
+    c.execute("SELECT * FROM users WHERE role='Admin'")
+    admin_user = c.fetchone()
+    if not admin_user:
+        c.execute("INSERT INTO users (username, email, password, role) VALUES ('nehaareddy02@gmail.com', 'nehaareddy02@gmail.com', 'Nehareddy@3131', 'Admin')")
+    else:
+        c.execute("UPDATE users SET username='nehaareddy02@gmail.com', email='nehaareddy02@gmail.com', password='Nehareddy@3131' WHERE id=?", (admin_user['id'],))
+        c.execute("DELETE FROM users WHERE role='Admin' AND id != ?", (admin_user['id'],))
         
     conn.commit()
     conn.close()

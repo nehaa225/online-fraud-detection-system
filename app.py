@@ -11,7 +11,7 @@ importlib.reload(alerts)
 import pytesseract
 import time
 
-SESSION_TIMEOUT_SECONDS = 300 # 5 minutes
+SESSION_TIMEOUT_SECONDS = 120 # 2 minutes
 
 from PIL import Image
 import os
@@ -194,7 +194,7 @@ def login_register_page():
                 user = database.login_user(log_user, log_pass)
                 if user:
                     email = user['email'] if 'email' in user.keys() else None
-                    if not email or user['username'] == 'admin':
+                    if not email:
                         st.session_state['logged_in'] = True
                         st.session_state['user_id'] = user['id']
                         st.session_state['username'] = user['username']
@@ -249,7 +249,6 @@ def login_register_page():
             reg_user = st.text_input("New Username", key="reg_user")
             reg_email = st.text_input("Email Address", key="reg_email")
             reg_pass = st.text_input("New Password", type="password", key="reg_pass")
-            reg_role = st.selectbox("Role", ["User", "Admin"])
             if st.button("Register & Send OTP", use_container_width=True):
                 if reg_user and reg_pass and reg_email:
                     otp = str(random.randint(100000, 999999))
@@ -258,7 +257,7 @@ def login_register_page():
                         "user": reg_user,
                         "email": reg_email,
                         "pass": reg_pass,
-                        "role": reg_role
+                        "role": "User"
                     }
                     success, error = alerts.send_otp(reg_email, otp)
                     if success:
@@ -348,7 +347,7 @@ def app_main():
         st.divider()
         
         if st.session_state['role'] == 'Admin':
-            menu = ["Dashboard", "Admin Panel"]
+            menu = ["Dashboard", "User Management", "Global Fraud Reports"]
         else:
             menu = ["Dashboard", "Report a Scam", "Text Detection", "URL Checker", "Image OCR", "Voice Scan", "Cyber Quiz"]
             
@@ -512,42 +511,41 @@ def app_main():
                 st.session_state.user_answers = []
                 st.rerun()
                 
-    elif choice == "Admin Panel":
-        st.markdown("<h1 class='main-header'>👨‍💼 Admin Dashboard</h1>", unsafe_allow_html=True)
+    elif choice == "User Management":
+        st.markdown("<h1 class='main-header'>👨‍💼 User Management</h1>", unsafe_allow_html=True)
         
-        tab1, tab2 = st.tabs(["User Management", "Fraud Reports"])
-        
-        with tab1:
-            st.subheader("Registered Users")
-            users = database.get_all_users()
-            for u in users:
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.markdown(f"**ID:** `{u['id']}` - **Username:** `{u['username']}` - **Role:** `{u['role']}`")
-                with col2:
-                    if u['username'] != 'admin':
-                        if st.button("Remove", key=f"del_{u['id']}", use_container_width=True):
-                            database.remove_user(u['id'])
-                            st.success(f"User {u['username']} removed!")
-                            st.rerun()
+        st.subheader("Registered Users")
+        users = database.get_all_users()
+        for u in users:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown(f"**ID:** `{u['id']}` - **Username:** `{u['username']}` - **Role:** `{u['role']}`")
+            with col2:
+                if u['username'] != 'admin':
+                    if st.button("Remove", key=f"del_{u['id']}", use_container_width=True):
+                        database.remove_user(u['id'])
+                        st.success(f"User {u['username']} removed!")
+                        st.rerun()
                 
-        with tab2:
-            st.subheader("Global Fraud Reports")
-            reports = database.get_all_reports()
+    elif choice == "Global Fraud Reports":
+        st.markdown("<h1 class='main-header'>📊 Global Fraud Reports</h1>", unsafe_allow_html=True)
+        
+        st.subheader("Global Fraud Reports")
+        reports = database.get_all_reports()
+        
+        if not reports:
+            st.info("No reports submitted yet.")
             
-            if not reports:
-                st.info("No reports submitted yet.")
-                
-            for r in reports:
-                st.markdown(f"""
-                <div class="glass-card">
-                    <b>Reporter:</b> {r['username']}<br>
-                    <b>Time:</b> {r['timestamp']}<br>
-                    <b>Type:</b> {r['type']}<br>
-                    <b>Link:</b> {r['link']}<br>
-                    <b>Description:</b> {r['description']}
-                </div>
-                """, unsafe_allow_html=True)
+        for r in reports:
+            st.markdown(f"""
+            <div class="glass-card">
+                <b>Reporter:</b> {r['username']}<br>
+                <b>Time:</b> {r['timestamp']}<br>
+                <b>Type:</b> {r['type']}<br>
+                <b>Link:</b> {r['link']}<br>
+                <b>Description:</b> {r['description']}
+            </div>
+            """, unsafe_allow_html=True)
 
 if 'last_activity' not in st.session_state:
     st.session_state['last_activity'] = time.time()
