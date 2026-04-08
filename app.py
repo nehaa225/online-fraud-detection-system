@@ -167,6 +167,8 @@ if 'role' not in st.session_state:
     st.session_state['role'] = ''
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = None
+if 'verified_logins' not in st.session_state:
+    st.session_state['verified_logins'] = set()
 
 import random
 
@@ -194,11 +196,12 @@ def login_register_page():
                 user = database.login_user(log_user, log_pass)
                 if user:
                     email = user['email'] if 'email' in user.keys() else None
-                    if not email:
+                    if not email or user['username'] in st.session_state['verified_logins']:
                         st.session_state['logged_in'] = True
                         st.session_state['user_id'] = user['id']
                         st.session_state['username'] = user['username']
                         st.session_state['role'] = user['role']
+                        st.session_state['verified_logins'].add(user['username'])
                         st.success("Logged in successfully!")
                         st.rerun()
                     else:
@@ -233,6 +236,7 @@ def login_register_page():
                     st.session_state['user_id'] = user['id']
                     st.session_state['username'] = user['username']
                     st.session_state['role'] = user['role']
+                    st.session_state['verified_logins'].add(user['username'])
                     st.session_state['otp_code'] = None
                     st.session_state['pending_user'] = None
                     st.success("Logged in successfully!")
@@ -521,7 +525,7 @@ def app_main():
             with col1:
                 st.markdown(f"**ID:** `{u['id']}` - **Username:** `{u['username']}` - **Role:** `{u['role']}`")
             with col2:
-                if u['username'] != 'admin':
+                if u['role'] != 'Admin':
                     if st.button("Remove", key=f"del_{u['id']}", use_container_width=True):
                         database.remove_user(u['id'])
                         st.success(f"User {u['username']} removed!")

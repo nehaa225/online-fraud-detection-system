@@ -29,15 +29,24 @@ def train_model():
     print("Model and vectorizer trained and saved successfully.")
     return True
 
+_loaded_model = None
+_loaded_vectorizer = None
+
 def predict_fraud(text):
-    if not os.path.exists(MODEL_PATH) or not os.path.exists(VECTORIZER_PATH):
-        print("Model not found. Training now...")
-        success = train_model()
-        if not success:
-            return "Error", 0.0
-            
-    model = joblib.load(MODEL_PATH)
-    vectorizer = joblib.load(VECTORIZER_PATH)
+    global _loaded_model, _loaded_vectorizer
+    
+    if _loaded_model is None or _loaded_vectorizer is None:
+        if not os.path.exists(MODEL_PATH) or not os.path.exists(VECTORIZER_PATH):
+            print("Model not found. Training now...")
+            success = train_model()
+            if not success:
+                return "Error", 0.0
+                
+        _loaded_model = joblib.load(MODEL_PATH)
+        _loaded_vectorizer = joblib.load(VECTORIZER_PATH)
+        
+    model = _loaded_model
+    vectorizer = _loaded_vectorizer
     
     text_vec = vectorizer.transform([text])
     prediction = model.predict(text_vec)[0]
