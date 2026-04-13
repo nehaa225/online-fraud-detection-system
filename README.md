@@ -139,7 +139,7 @@ This project is open-source and available under the **MIT License**.
 
 ## 👩‍💻 Author
 
-**Neha Reddy**
-GitHub: [https://github.com/nehaa225](https://github.com/nehaa225)
+**Neha Reddy K**
+**GitHub: [https://github.com/nehaa225](https://github.com/nehaa225)**
 
 
