@@ -17,8 +17,14 @@ from PIL import Image
 import os
 import io
 
-# Optional: Set tesseract path to local install if needed
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Set tesseract path to local install
+tess_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.tesseract_cmd = tess_path
+pytesseract.pytesseract.tesseract_cmd = tess_path
+tess_dir = r'C:\Program Files\Tesseract-OCR'
+if tess_dir not in os.environ.get('PATH', ''):
+    os.environ['PATH'] = tess_dir + os.pathsep + os.environ.get('PATH', '')
+os.environ['TESSDATA_PREFIX'] = r'C:\Program Files\Tesseract-OCR\tessdata'
 
 st.set_page_config(page_title="FraudShield AI", page_icon="🛡️", layout="wide")
 
@@ -167,6 +173,8 @@ if 'role' not in st.session_state:
     st.session_state['role'] = ''
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = None
+if 'email' not in st.session_state:
+    st.session_state['email'] = ''
 if 'verified_logins' not in st.session_state:
     st.session_state['verified_logins'] = set()
 
@@ -190,10 +198,10 @@ def login_register_page():
     with col2:
         if st.session_state['auth_view'] == 'login':
             st.subheader("Login to your account")
-            log_user = st.text_input("Username", key="log_user")
+            log_user = st.text_input("Username or Email", key="log_user")
             log_pass = st.text_input("Password", type="password", key="log_pass")
             if st.button("Login", use_container_width=True):
-                user = database.login_user(log_user, log_pass)
+                user = database.login_user(log_user.strip(), log_pass)
                 if user:
                     email = user['email'] if 'email' in user.keys() else None
                     if not email or user['username'] in st.session_state['verified_logins']:
@@ -201,6 +209,7 @@ def login_register_page():
                         st.session_state['user_id'] = user['id']
                         st.session_state['username'] = user['username']
                         st.session_state['role'] = user['role']
+                        st.session_state['email'] = email
                         st.session_state['verified_logins'].add(user['username'])
                         st.success("Logged in successfully!")
                         st.rerun()
@@ -236,6 +245,7 @@ def login_register_page():
                     st.session_state['user_id'] = user['id']
                     st.session_state['username'] = user['username']
                     st.session_state['role'] = user['role']
+                    st.session_state['email'] = user['email'] if 'email' in user.keys() else None
                     st.session_state['verified_logins'].add(user['username'])
                     st.session_state['otp_code'] = None
                     st.session_state['pending_user'] = None
@@ -307,6 +317,7 @@ def logout():
     st.session_state['user_id'] = None
     st.session_state['username'] = ''
     st.session_state['role'] = ''
+    st.session_state['email'] = ''
 
 def analyze_and_report_ui(text, scan_type):
     st.markdown("### 🤖 Analysis Results")
@@ -314,6 +325,13 @@ def analyze_and_report_ui(text, scan_type):
     
     score, level, patterns, suggestion = risk_analysis.analyze_risk(text)
     
+    
+    if prediction == "Fraud" or level == "High":
+        email = st.session_state.get('email')
+        if email:
+            alerts.send_alert(email, "High", f"Fraudulent text detected in {scan_type} scan.\n\nText snippet:\n{text[:100]}...\n\nRisk Score: {score}%")
+            st.toast("Email alert sent about this finding.", icon="✉️")
+
     # UI Presentation
     col1, col2 = st.columns(2)
     with col1:
@@ -419,6 +437,11 @@ def app_main():
                     for r in reasons:
                         st.markdown(f"- {r}")
                     database.add_report(st.session_state['user_id'], "URL", "Suspicious link detected", url)
+                    
+                    email = st.session_state.get('email')
+                    if email:
+                        alerts.send_alert(email, "High", f"Suspicious URL detected: {url}\n\nReasons:\n" + "\n".join(reasons))
+                        st.toast("Email alert sent about this finding.", icon="✉️")
                 else:
                     st.success("✅ URL appears to be structurally safe.")
                     for r in reasons:
@@ -563,6 +586,7 @@ if st.session_state.get('logged_in'):
         st.session_state['user_id'] = None
         st.session_state['username'] = ''
         st.session_state['role'] = ''
+        st.session_state['email'] = ''
         st.session_state['auth_view'] = 'login'
         st.session_state['session_expired'] = True
         st.rerun()

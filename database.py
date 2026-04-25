@@ -52,7 +52,7 @@ def add_user(username, email, password, role='User'):
     conn = get_db_connection()
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)", (username, email, password, role))
+        c.execute("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)", (username.strip(), email.strip(), password, role))
         conn.commit()
         return True
     except sqlite3.IntegrityError:
@@ -63,7 +63,7 @@ def add_user(username, email, password, role='User'):
 def login_user(username, password):
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+    c.execute("SELECT * FROM users WHERE (username=? OR email=?) AND password=?", (username, username, password))
     user = c.fetchone()
     conn.close()
     return user
